@@ -1,0 +1,243 @@
+﻿```razor
+@page "/clientes"
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@using FinancieraConsumo.Web.Models.Entities
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Clientes</PageTitle>
+
+<h3 class="mb-4">Gestión de Clientes</h3>
+
+<button class="btn btn-success mb-3" @onclick="NuevoCliente">
+    Nuevo Cliente
+</button>
+
+@if (mostrarFormulario)
+{
+    <div class="card shadow mb-4">
+        <div class="card-header bg-success text-white">
+            @(editando ? "Editar Cliente" : "Registrar Cliente")
+        </div>
+
+        <div class="card-body">
+
+            <div class="row mb-3">
+
+                <div class="col-md-4">
+                    <label class="form-label">Cédula</label>
+                    <input class="form-control"
+                           @bind="clienteActual.DocumentoIdentidad" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Nombres</label>
+                    <input class="form-control"
+                           @bind="clienteActual.Nombres" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Apellidos</label>
+                    <input class="form-control"
+                           @bind="clienteActual.Apellidos" />
+                </div>
+
+            </div>
+
+            <div class="row mb-3">
+
+                <div class="col-md-4">
+                    <label class="form-label">Teléfono</label>
+                    <input class="form-control"
+                           @bind="clienteActual.TelefonoCelular" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Correo</label>
+                    <input class="form-control"
+                           @bind="clienteActual.CorreoElectronico" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Ingreso mensual</label>
+                    <input type="number"
+                           class="form-control"
+                           @bind="clienteActual.IngresoMensual" />
+                </div>
+
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Dirección</label>
+
+                <textarea class="form-control"
+                          @bind="clienteActual.DireccionDomicilio">
+                </textarea>
+            </div>
+
+            <button class="btn btn-primary"
+                    @onclick="GuardarCliente">
+                Guardar
+            </button>
+
+            <button class="btn btn-secondary ms-2"
+                    @onclick="Cancelar">
+                Cancelar
+            </button>
+
+        </div>
+    </div>
+}
+
+<div class="card shadow">
+
+    <div class="card-header bg-primary text-white">
+        Lista de Clientes
+    </div>
+
+    <div class="card-body">
+
+        <table class="table table-hover">
+
+            <thead class="table-dark">
+                <tr>
+                    <th>Cédula</th>
+                    <th>Nombres</th>
+                    <th>Apellidos</th>
+                    <th>Teléfono</th>
+                    <th>Ingreso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var cliente in clientes)
+                {
+                    <tr>
+
+                        <td>@cliente.DocumentoIdentidad</td>
+
+                        <td>@cliente.Nombres</td>
+
+                        <td>@cliente.Apellidos</td>
+
+                        <td>@cliente.TelefonoCelular</td>
+
+                        <td>@cliente.IngresoMensual.ToString("N2")</td>
+
+                        <td>
+
+                            <button class="btn btn-warning btn-sm"
+                                    @onclick="() => Editar(cliente)">
+                                Editar
+                            </button>
+
+                            <button class="btn btn-danger btn-sm ms-2"
+                                    @onclick="() => Eliminar(cliente.IdCliente)">
+                                Eliminar
+                            </button>
+
+                        </td>
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+@code {
+
+    List<Cliente> clientes = new();
+
+    Cliente clienteActual = new();
+
+    bool mostrarFormulario = false;
+
+    bool editando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    async Task CargarClientes()
+    {
+        clientes = await Db.Clientes
+            .Where(c => c.Estado)
+            .ToListAsync();
+    }
+
+    void NuevoCliente()
+    {
+        clienteActual = new Cliente
+        {
+            FechaRegistro = DateTime.Now,
+            Estado = true
+        };
+
+        mostrarFormulario = true;
+
+        editando = false;
+    }
+
+    void Editar(Cliente cliente)
+    {
+        clienteActual = cliente;
+
+        mostrarFormulario = true;
+
+        editando = true;
+    }
+
+    async Task GuardarCliente()
+    {
+        if (!editando)
+        {
+            Db.Clientes.Add(clienteActual);
+        }
+        else
+        {
+            Db.Clientes.Update(clienteActual);
+        }
+
+        await Db.SaveChangesAsync();
+
+        mostrarFormulario = false;
+
+        editando = false;
+
+        clienteActual = new Cliente();
+
+        await CargarClientes();
+    }
+
+    async Task Eliminar(int id)
+    {
+        var cliente = await Db.Clientes.FindAsync(id);
+
+        if (cliente != null)
+        {
+            cliente.Estado = false;
+
+            await Db.SaveChangesAsync();
+
+            await CargarClientes();
+        }
+    }
+
+    void Cancelar()
+    {
+        mostrarFormulario = false;
+
+        editando = false;
+
+        clienteActual = new Cliente();
+    }
+}
+```
