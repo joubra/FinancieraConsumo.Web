@@ -1,0 +1,137 @@
+﻿@page "/solicitudes"
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@using FinancieraConsumo.Web.Models.Entities
+@using Microsoft.EntityFrameworkCore
+
+<h3 class="mb-4">Solicitudes de Crédito</h3>
+
+<button class="btn btn-success mb-3" @onclick="Nueva">
+    Nueva Solicitud
+</button>
+
+@if (mostrar)
+{
+    <div class="card p-3 mb-3">
+
+        <label>Cliente</label>
+        <select class="form-control" @bind="solicitud.IdCliente">
+            @foreach (var c in clientes)
+            {
+                <option value="@c.IdCliente">@c.Nombres @c.Apellidos</option>
+            }
+        </select>
+
+        <label>Fiador</label>
+        <select class="form-control" @bind="solicitud.IdFiador">
+            <option value="">-- Sin fiador --</option>
+            @foreach (var f in fiadores)
+            {
+                <option value="@f.IdFiador">@f.Nombres @f.Apellidos</option>
+            }
+        </select>
+
+        <label>Monto</label>
+        <input type="number" class="form-control" @bind="solicitud.MontoSolicitado" />
+
+        <label>Plazo (meses)</label>
+        <input type="number" class="form-control" @bind="solicitud.PlazoMeses" />
+
+        <button class="btn btn-primary mt-2" @onclick="Guardar">
+            Guardar
+        </button>
+    </div>
+}
+
+<table class="table table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Cliente</th>
+            <th>Fiador</th>
+            <th>Monto</th>
+            <th>Plazo</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var s in solicitudes)
+        {
+            <tr>
+                <td>@ObtenerNombreCliente(s.IdCliente)</td>
+                <td>@ObtenerNombreFiador(s.IdFiador)</td>
+                <td>@s.MontoSolicitado</td>
+                <td>@s.PlazoMeses</td>
+                <td>@s.EstadoSolicitud</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+
+    List<SolicitudCredito> solicitudes = new();
+    List<Cliente> clientes = new();
+    List<Fiador> fiadores = new();
+
+    SolicitudCredito solicitud = new();
+
+    bool mostrar = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = await Db.Clientes.ToListAsync();
+        fiadores = await Db.Fiadores.ToListAsync();
+
+        await Cargar();
+    }
+
+    async Task Cargar()
+    {
+        solicitudes = await Db.SolicitudesCredito.ToListAsync();
+    }
+
+    void Nueva()
+    {
+        solicitud = new SolicitudCredito
+        {
+            IdAnalista = 1 // 👈 IMPORTANTE
+        };
+
+        mostrar = true;
+    }
+
+    async Task Guardar()
+    {
+        if (solicitud.IdCliente <= 0 ||
+            solicitud.MontoSolicitado <= 0 ||
+            solicitud.PlazoMeses <= 0)
+        {
+            return;
+        }
+
+        solicitud.IdAnalista = 1;
+        solicitud.EstadoSolicitud = "Pendiente";
+        solicitud.FechaSolicitud = DateTime.Now;
+
+        Db.SolicitudesCredito.Add(solicitud);
+        await Db.SaveChangesAsync();
+
+        mostrar = false;
+        await Cargar();
+    }
+
+    string ObtenerNombreCliente(int id)
+    {
+        var c = clientes.FirstOrDefault(x => x.IdCliente == id);
+        return c != null ? c.Nombres + " " + c.Apellidos : "";
+    }
+
+    string ObtenerNombreFiador(int? id)
+    {
+        if (id == null) return "Sin fiador";
+
+        var f = fiadores.FirstOrDefault(x => x.IdFiador == id);
+        return f != null ? f.Nombres + " " + f.Apellidos : "";
+    }
+}

@@ -1,15 +1,15 @@
-﻿@page "/clientes"
+﻿@page "/fiadores"
 @rendermode InteractiveServer
 @inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
 @using FinancieraConsumo.Web.Models.Entities
 @using Microsoft.EntityFrameworkCore
 
-<PageTitle>Clientes</PageTitle>
+<PageTitle>Fiadores</PageTitle>
 
-<h3 class="mb-4">Gestión de Clientes</h3>
+<h3 class="mb-4 text-primary fw-bold">Gestión de Fiadores</h3>
 
-<button class="btn btn-success mb-3" @onclick="NuevoCliente">
-    Nuevo Cliente
+<button class="btn btn-success mb-3" @onclick="NuevoFiador">
+    Nuevo Fiador
 </button>
 
 @if (!string.IsNullOrEmpty(mensaje))
@@ -23,7 +23,7 @@
 @if (idAEliminar != null)
 {
     <div class="alert alert-warning">
-        <strong>¿Seguro que deseas eliminar este cliente?</strong>
+        <strong>¿Seguro que deseas eliminar este fiador?</strong>
 
         <div class="mt-2">
             <button class="btn btn-danger me-2" @onclick="EliminarConfirmado">
@@ -41,77 +41,74 @@
 {
     <div class="card shadow mb-4">
         <div class="card-header bg-success text-white">
-            @(editando ? "Editar Cliente" : "Registrar Cliente")
+            @(editando ? "Editar Fiador" : "Registrar Fiador")
         </div>
 
         <div class="card-body">
+
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label>Cédula</label>
-                    <input class="form-control" @bind="clienteActual.DocumentoIdentidad" />
+                    <input class="form-control" @bind="fiadorActual.DocumentoIdentidad" />
                 </div>
 
                 <div class="col-md-4">
                     <label>Nombres</label>
-                    <input class="form-control" @bind="clienteActual.Nombres" />
+                    <input class="form-control" @bind="fiadorActual.Nombres" />
                 </div>
 
                 <div class="col-md-4">
                     <label>Apellidos</label>
-                    <input class="form-control" @bind="clienteActual.Apellidos" />
+                    <input class="form-control" @bind="fiadorActual.Apellidos" />
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label>Teléfono</label>
-                    <input class="form-control" @bind="clienteActual.TelefonoCelular" />
-                </div>
-
-                <div class="col-md-4">
-                    <label>Correo</label>
-                    <input class="form-control" @bind="clienteActual.CorreoElectronico" />
+                    <input class="form-control" @bind="fiadorActual.TelefonoCelular" />
                 </div>
 
                 <div class="col-md-4">
                     <label>Ingreso mensual</label>
-                    <input type="number" class="form-control" @bind="clienteActual.IngresoMensual" />
+                    <input type="number" class="form-control" @bind="fiadorActual.IngresoMensual" />
                 </div>
             </div>
 
             <div class="mb-3">
                 <label>Dirección</label>
-                <textarea class="form-control" @bind="clienteActual.DireccionDomicilio"></textarea>
+                <textarea class="form-control" @bind="fiadorActual.DireccionDomicilio"></textarea>
             </div>
 
-            <button class="btn btn-primary" @onclick="GuardarCliente">
+            <button class="btn btn-primary" @onclick="GuardarFiador">
                 @(editando ? "Actualizar" : "Guardar")
             </button>
 
             <button class="btn btn-secondary ms-2" @onclick="Cancelar">
                 Cancelar
             </button>
+
         </div>
     </div>
 }
 
 <div class="card shadow">
     <div class="card-header bg-primary text-white">
-        Lista de Clientes
+        Lista de Fiadores
     </div>
 
     <div class="card-body">
 
         <div class="mb-3">
             <input class="form-control"
-                   placeholder="Buscar por cédula, nombre, apellido o teléfono..."
+                   placeholder="Buscar fiador..."
                    @oninput="Buscar" />
         </div>
-        <select class="form-select w-auto mb-3"
-                @onchange="CambiarCantidad">
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="20">20</option>
+
+        <select class="form-select w-auto mb-3" @onchange="CambiarCantidad">
+            <option value="5">5 registros</option>
+            <option value="10">10 registros</option>
+            <option value="20">20 registros</option>
         </select>
 
         <table class="table table-hover">
@@ -127,23 +124,23 @@
             </thead>
 
             <tbody>
-                @foreach (var cliente in clientes)
+                @foreach (var fiador in fiadores)
                 {
                     <tr>
-                        <td>@cliente.DocumentoIdentidad</td>
-                        <td>@cliente.Nombres</td>
-                        <td>@cliente.Apellidos</td>
-                        <td>@cliente.TelefonoCelular</td>
-                        <td>@cliente.IngresoMensual.ToString("N2")</td>
+                        <td>@fiador.DocumentoIdentidad</td>
+                        <td>@fiador.Nombres</td>
+                        <td>@fiador.Apellidos</td>
+                        <td>@fiador.TelefonoCelular</td>
+                        <td>@fiador.IngresoMensual.ToString("N2")</td>
 
                         <td>
                             <button class="btn btn-warning btn-sm"
-                                    @onclick="() => Editar(cliente)">
+                                    @onclick="() => Editar(fiador)">
                                 Editar
                             </button>
 
                             <button class="btn btn-danger btn-sm ms-2"
-                                    @onclick="() => ConfirmarEliminar(cliente.IdCliente)">
+                                    @onclick="() => ConfirmarEliminar(fiador.IdFiador)">
                                 Eliminar
                             </button>
                         </td>
@@ -151,6 +148,7 @@
                 }
             </tbody>
         </table>
+
         <div class="mt-2">
             Mostrando @((paginaActual - 1) * registrosPorPagina + 1)
             -
@@ -173,12 +171,14 @@
                 Siguiente
             </button>
         </div>
+
     </div>
 </div>
 
 @code {
-    List<Cliente> clientes = new();
-    Cliente clienteActual = new();
+
+    List<Fiador> fiadores = new();
+    Fiador fiadorActual = new();
 
     bool mostrarFormulario = false;
     bool editando = false;
@@ -196,38 +196,25 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarClientes();
+        await CargarFiadores();
     }
 
-    async Task CargarClientes()
+    async Task CargarFiadores()
     {
-        var query = Db.Clientes
-            .Where(c =>
-                c.Estado &&
-                (
-                    string.IsNullOrEmpty(textoBusqueda) ||
-                    c.DocumentoIdentidad.Contains(textoBusqueda) ||
-                    c.Nombres.Contains(textoBusqueda) ||
-                    c.Apellidos.Contains(textoBusqueda) ||
-                    c.TelefonoCelular.Contains(textoBusqueda)
-                )
+        var query = Db.Fiadores
+            .Where(f =>
+                string.IsNullOrEmpty(textoBusqueda) ||
+                f.DocumentoIdentidad.Contains(textoBusqueda) ||
+                f.Nombres.Contains(textoBusqueda) ||
+                f.Apellidos.Contains(textoBusqueda) ||
+                f.TelefonoCelular.Contains(textoBusqueda)
             );
 
         totalRegistros = await query.CountAsync();
-
         totalPaginas = (int)Math.Ceiling(totalRegistros / (double)registrosPorPagina);
 
-        if (totalPaginas == 0)
-        {
-            paginaActual = 1;
-        }
-        else if (paginaActual > totalPaginas)
-        {
-            paginaActual = totalPaginas;
-        }
-
-        clientes = await query
-            .OrderBy(c => c.IdCliente)
+        fiadores = await query
+            .OrderBy(f => f.IdFiador)
             .Skip((paginaActual - 1) * registrosPorPagina)
             .Take(registrosPorPagina)
             .ToListAsync();
@@ -237,7 +224,14 @@
     {
         textoBusqueda = e.Value?.ToString() ?? "";
         paginaActual = 1;
-        await CargarClientes();
+        await CargarFiadores();
+    }
+
+    async Task CambiarCantidad(ChangeEventArgs e)
+    {
+        registrosPorPagina = int.Parse(e.Value!.ToString()!);
+        paginaActual = 1;
+        await CargarFiadores();
     }
 
     async Task PaginaAnterior()
@@ -245,7 +239,7 @@
         if (paginaActual > 1)
         {
             paginaActual--;
-            await CargarClientes();
+            await CargarFiadores();
         }
     }
 
@@ -254,73 +248,40 @@
         if (paginaActual < totalPaginas)
         {
             paginaActual++;
-            await CargarClientes();
+            await CargarFiadores();
         }
     }
 
-    void CerrarAlerta()
+    void NuevoFiador()
     {
-        mensaje = "";
-    }
-
-    void NuevoCliente()
-    {
-        clienteActual = new Cliente
-        {
-            FechaRegistro = DateTime.Now,
-            Estado = true
-        };
-
+        fiadorActual = new Fiador { FechaRegistro = DateTime.Now };
         mostrarFormulario = true;
         editando = false;
     }
 
-    void Editar(Cliente cliente)
+    void Editar(Fiador f)
     {
-        clienteActual = cliente;
+        fiadorActual = f;
         mostrarFormulario = true;
         editando = true;
     }
 
-    async Task GuardarCliente()
+    async Task GuardarFiador()
     {
-        if (string.IsNullOrWhiteSpace(clienteActual.DocumentoIdentidad) ||
-            string.IsNullOrWhiteSpace(clienteActual.Nombres) ||
-            string.IsNullOrWhiteSpace(clienteActual.Apellidos) ||
-            string.IsNullOrWhiteSpace(clienteActual.TelefonoCelular) ||
-            string.IsNullOrWhiteSpace(clienteActual.DireccionDomicilio) ||
-            clienteActual.IngresoMensual <= 0)
-        {
-            mensaje = "Complete todos los campos obligatorios correctamente.";
-            tipoAlerta = "alert-danger";
-            return;
-        }
-
         if (!editando)
-        {
-            Db.Clientes.Add(clienteActual);
-            mensaje = "Cliente registrado correctamente.";
-        }
+            Db.Fiadores.Add(fiadorActual);
         else
-        {
-            Db.Clientes.Update(clienteActual);
-            mensaje = "Cliente actualizado correctamente.";
-        }
+            Db.Fiadores.Update(fiadorActual);
 
         await Db.SaveChangesAsync();
 
+        mensaje = "Operación realizada correctamente.";
         tipoAlerta = "alert-success";
+
         mostrarFormulario = false;
         editando = false;
-        clienteActual = new Cliente();
 
-        await CargarClientes();
-    }
-    async Task CambiarCantidad(ChangeEventArgs e)
-    {
-        registrosPorPagina = int.Parse(e.Value!.ToString()!);
-        paginaActual = 1;
-        await CargarClientes();
+        await CargarFiadores();
     }
 
     void ConfirmarEliminar(int id)
@@ -330,20 +291,12 @@
 
     async Task EliminarConfirmado()
     {
-        if (idAEliminar != null)
+        var f = await Db.Fiadores.FindAsync(idAEliminar);
+        if (f != null)
         {
-            var cliente = await Db.Clientes.FindAsync(idAEliminar);
-
-            if (cliente != null)
-            {
-                cliente.Estado = false;
-                await Db.SaveChangesAsync();
-
-                mensaje = "Cliente eliminado correctamente.";
-                tipoAlerta = "alert-warning";
-
-                await CargarClientes();
-            }
+            Db.Fiadores.Remove(f);
+            await Db.SaveChangesAsync();
+            await CargarFiadores();
         }
 
         idAEliminar = null;
@@ -358,6 +311,10 @@
     {
         mostrarFormulario = false;
         editando = false;
-        clienteActual = new Cliente();
+    }
+
+    void CerrarAlerta()
+    {
+        mensaje = "";
     }
 }

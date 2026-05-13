@@ -11,5 +11,7 @@ namespace FinancieraConsumo.Web.Data
         }
 
         public DbSet<Cliente> Clientes { get; set; }
+        public DbSet<Fiador> Fiadores { get; set; }
+        public DbSet<SolicitudCredito> SolicitudesCredito { get; set; }
     }
 }
