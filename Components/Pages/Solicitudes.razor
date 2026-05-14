@@ -40,6 +40,9 @@
         <button class="btn btn-primary mt-2" @onclick="Guardar">
             Guardar
         </button>
+        <button class="btn btn-secondary mt-2 ms-2" @onclick="Cancelar">
+            Cancelar
+        </button>
     </div>
 }
 
@@ -62,10 +65,27 @@
                 <td>@ObtenerNombreFiador(s.IdFiador)</td>
                 <td>@s.MontoSolicitado</td>
                 <td>@s.PlazoMeses</td>
-                <td>@s.EstadoSolicitud</td>
+
+                <td>
+                    @s.EstadoSolicitud
+
+                    @if (s.EstadoSolicitud == "Pendiente")
+                    {
+                        <button class="btn btn-success btn-sm ms-2"
+                                @onclick="() => Aprobar(s.IdSolicitud)">
+                            Aprobar
+                        </button>
+
+                        <button class="btn btn-danger btn-sm ms-2"
+                                @onclick="() => Rechazar(s.IdSolicitud)">
+                            Rechazar
+                        </button>
+                    }
+                </td>
             </tr>
-        }
-    </tbody>
+        } 
+        </tbody>
+        
 </table>
 
 @code {
@@ -85,6 +105,11 @@
 
         await Cargar();
     }
+    void Cancelar()
+    {
+        mostrar = false;
+        solicitud = new SolicitudCredito();
+    }
 
     async Task Cargar()
     {
@@ -95,10 +120,84 @@
     {
         solicitud = new SolicitudCredito
         {
-            IdAnalista = 1 // 👈 IMPORTANTE
+            IdAnalista = 1
         };
 
         mostrar = true;
+    }
+    async Task Aprobar(int id)
+    {
+        var solicitud = await Db.SolicitudesCredito.FindAsync(id);
+
+        if (solicitud != null)
+        {
+            solicitud.EstadoSolicitud = "Aprobada";
+
+            var credito = new Credito
+            {
+                IdSolicitud = solicitud.IdSolicitud,
+                MontoOtorgado = solicitud.MontoSolicitado,
+                TasaInteresAnual = 12,
+                PlazoMeses = solicitud.PlazoMeses,
+                FechaInicio = DateTime.Today,
+                FechaVencimiento = DateTime.Today.AddMonths(solicitud.PlazoMeses),
+                EstadoCredito = "Vigente"
+            };
+
+            Db.Creditos.Add(credito);
+
+         
+            await Db.SaveChangesAsync();
+
+            int numeroCuotas = solicitud.PlazoMeses;
+            decimal monto = solicitud.MontoSolicitado;
+            decimal interesAnual = 12;
+
+            decimal interesMensual = interesAnual / 12 / 100;
+            double interesMensualDouble = (double)interesMensual;
+
+            decimal cuotaFija = monto * (decimal)(
+                interesMensualDouble /
+                (1 - Math.Pow(1 + interesMensualDouble, -numeroCuotas))
+            );
+
+            for (int i = 1; i <= numeroCuotas; i++)
+            {
+                decimal interes = monto * interesMensual;
+                decimal capital = cuotaFija - interes;
+
+                var cuota = new Cuota
+                {
+                    IdCredito = credito.IdCredito,
+                    NumeroCuota = i,
+                    Capital = capital,
+                    Interes = interes,
+                    FechaVencimiento = DateTime.Today.AddMonths(i)
+                };
+
+                Db.Cuotas.Add(cuota);
+
+                monto -= capital;
+            }
+
+          
+            await Db.SaveChangesAsync();
+
+            await Cargar();
+        }
+    }
+
+    async Task Rechazar(int id)
+    {
+        var solicitud = await Db.SolicitudesCredito.FindAsync(id);
+
+        if (solicitud != null)
+        {
+            solicitud.EstadoSolicitud = "Rechazada";
+            await Db.SaveChangesAsync();
+
+            await Cargar();
+        }
     }
 
     async Task Guardar()
@@ -106,18 +205,16 @@
         if (solicitud.IdCliente <= 0 ||
             solicitud.MontoSolicitado <= 0 ||
             solicitud.PlazoMeses <= 0)
-        {
             return;
-        }
 
         solicitud.IdAnalista = 1;
-        solicitud.EstadoSolicitud = "Pendiente";
-        solicitud.FechaSolicitud = DateTime.Now;
 
         Db.SolicitudesCredito.Add(solicitud);
         await Db.SaveChangesAsync();
 
         mostrar = false;
+        solicitud = new SolicitudCredito(); 
+
         await Cargar();
     }
 

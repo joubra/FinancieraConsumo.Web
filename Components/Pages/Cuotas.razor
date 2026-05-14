@@ -1,0 +1,94 @@
+﻿@page "/cuotas"
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@using FinancieraConsumo.Web.Models.Entities
+@using Microsoft.EntityFrameworkCore
+
+<h3 class="mb-4 text-primary fw-bold">Cuotas por Crédito</h3>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <label>Seleccionar crédito</label>
+        <select class="form-select" @onchange="CargarCuotasCredito">
+            <option value="0">-- Seleccione --</option>
+            @foreach (var c in creditos)
+            {
+                <option value="@c.IdCredito">
+                    Crédito #@c.IdCredito - Monto: @c.MontoOtorgado.ToString("N2")
+                </option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (cuotas.Any())
+{
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            Detalle de Cuotas
+        </div>
+
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Capital</th>
+                        <th>Interés</th>
+                        <th>Mora</th>
+                        <th>Total</th>
+                        <th>Vencimiento</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var cuota in cuotas)
+                    {
+                        <tr>
+                            <td>@cuota.NumeroCuota</td>
+                            <td>@cuota.Capital.ToString("N2")</td>
+                            <td>@cuota.Interes.ToString("N2")</td>
+                            <td>@cuota.MoraAcumulada.ToString("N2")</td>
+                            <td>@((cuota.Capital + cuota.Interes + cuota.MoraAcumulada).ToString("N2"))</td>
+                            <td>@cuota.FechaVencimiento.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">
+                                    @cuota.EstadoCuota
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    List<Credito> creditos = new();
+    List<Cuota> cuotas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        creditos = await Db.Creditos
+            .OrderByDescending(c => c.IdCredito)
+            .ToListAsync();
+    }
+
+    async Task CargarCuotasCredito(ChangeEventArgs e)
+    {
+        int idCredito = int.Parse(e.Value!.ToString()!);
+
+        if (idCredito == 0)
+        {
+            cuotas.Clear();
+            return;
+        }
+
+        cuotas = await Db.Cuotas
+            .Where(c => c.IdCredito == idCredito)
+            .OrderBy(c => c.NumeroCuota)
+            .ToListAsync();
+    }
+}
