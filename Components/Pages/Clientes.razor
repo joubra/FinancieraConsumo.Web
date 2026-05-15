@@ -1,4 +1,6 @@
 ﻿@page "/clientes"
+@inject SesionService Sesion
+@inject NavigationManager Nav
 @rendermode InteractiveServer
 @inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
 @using FinancieraConsumo.Web.Models.Entities
@@ -246,6 +248,13 @@
         {
             paginaActual--;
             await CargarClientes();
+        }
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !Sesion.EstaLogueado)
+        {
+            Nav.NavigateTo("/login");
         }
     }
 

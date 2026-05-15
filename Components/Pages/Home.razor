@@ -1,7 +1,15 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@inject NavigationManager Nav
 
-<PageTitle>Home</PageTitle>
+<p>Redirigiendo...</p>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+}

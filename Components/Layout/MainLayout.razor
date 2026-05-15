@@ -1,23 +1,45 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject SesionService Sesion
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+
+    @if (!Nav.Uri.Contains("/login"))
+    {
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+    }
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="top-row px-4 d-flex justify-content-between">
+            <h4>FinancieraConsumo.Web</h4>
+
+            @if (Sesion.EstaLogueado)
+            {
+                <div>
+                    <span class="me-3">
+                        Usuario: <strong>@Sesion.UsuarioActual!.Username</strong>
+                    </span>
+
+                    <button class="btn btn-outline-danger btn-sm" @onclick="CerrarSesion">
+                        Cerrar sesión
+                    </button>
+                </div>
+            }
         </div>
 
         <article class="content px-4">
             @Body
         </article>
     </main>
+
 </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+@code {
+    void CerrarSesion()
+    {
+        Sesion.CerrarSesion();
+        Nav.NavigateTo("/login");
+    }
+}

@@ -1,5 +1,7 @@
 ﻿@page "/fiadores"
 @rendermode InteractiveServer
+@inject SesionService Sesion
+@inject NavigationManager Nav
 @inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
 @using FinancieraConsumo.Web.Models.Entities
 @using Microsoft.EntityFrameworkCore
@@ -45,7 +47,6 @@
         </div>
 
         <div class="card-body">
-
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label>Cédula</label>
@@ -87,7 +88,6 @@
             <button class="btn btn-secondary ms-2" @onclick="Cancelar">
                 Cancelar
             </button>
-
         </div>
     </div>
 }
@@ -100,9 +100,7 @@
     <div class="card-body">
 
         <div class="mb-3">
-            <input class="form-control"
-                   placeholder="Buscar fiador..."
-                   @oninput="Buscar" />
+            <input class="form-control" placeholder="Buscar fiador..." @oninput="Buscar" />
         </div>
 
         <select class="form-select w-auto mb-3" @onchange="CambiarCantidad">
@@ -132,7 +130,6 @@
                         <td>@fiador.Apellidos</td>
                         <td>@fiador.TelefonoCelular</td>
                         <td>@fiador.IngresoMensual.ToString("N2")</td>
-
                         <td>
                             <button class="btn btn-warning btn-sm"
                                     @onclick="() => Editar(fiador)">
@@ -176,7 +173,6 @@
 </div>
 
 @code {
-
     List<Fiador> fiadores = new();
     Fiador fiadorActual = new();
 
@@ -185,6 +181,7 @@
 
     string mensaje = "";
     string tipoAlerta = "alert-success";
+
     string textoBusqueda = "";
 
     int? idAEliminar = null;
@@ -199,16 +196,23 @@
         await CargarFiadores();
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !Sesion.EstaLogueado)
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+
     async Task CargarFiadores()
     {
-        var query = Db.Fiadores
-            .Where(f =>
-                string.IsNullOrEmpty(textoBusqueda) ||
-                f.DocumentoIdentidad.Contains(textoBusqueda) ||
-                f.Nombres.Contains(textoBusqueda) ||
-                f.Apellidos.Contains(textoBusqueda) ||
-                f.TelefonoCelular.Contains(textoBusqueda)
-            );
+        var query = Db.Fiadores.Where(f =>
+            string.IsNullOrEmpty(textoBusqueda) ||
+            f.DocumentoIdentidad.Contains(textoBusqueda) ||
+            f.Nombres.Contains(textoBusqueda) ||
+            f.Apellidos.Contains(textoBusqueda) ||
+            f.TelefonoCelular.Contains(textoBusqueda)
+        );
 
         totalRegistros = await query.CountAsync();
         totalPaginas = (int)Math.Ceiling(totalRegistros / (double)registrosPorPagina);
@@ -292,6 +296,7 @@
     async Task EliminarConfirmado()
     {
         var f = await Db.Fiadores.FindAsync(idAEliminar);
+
         if (f != null)
         {
             Db.Fiadores.Remove(f);

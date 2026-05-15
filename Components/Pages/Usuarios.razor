@@ -1,0 +1,163 @@
+﻿@page "/usuarios"
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@using FinancieraConsumo.Web.Models.Entities
+@using Microsoft.EntityFrameworkCore
+
+<h3 class="mb-4 text-primary fw-bold">Gestión de Usuarios</h3>
+
+<button class="btn btn-success mb-3" @onclick="NuevoUsuario">
+    Nuevo Usuario
+</button>
+
+@if (mostrarFormulario)
+{
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            Registrar Usuario
+        </div>
+
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label>Usuario</label>
+                    <input class="form-control" @bind="usuarioActual.Username" />
+                </div>
+
+                <div class="col-md-4">
+                    <label>Contraseña</label>
+                    <input class="form-control" @bind="usuarioActual.PasswordHash" />
+                </div>
+
+                <div class="col-md-4">
+                    <label>Rol</label>
+                    <select class="form-select" @bind="usuarioActual.IdRol">
+                        @foreach (var rol in roles)
+                        {
+                            <option value="@rol.IdRol">@rol.NombreRol</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" @onclick="GuardarUsuario">
+                Guardar
+            </button>
+
+            <button class="btn btn-secondary ms-2" @onclick="Cancelar">
+                Cancelar
+            </button>
+        </div>
+    </div>
+}
+
+<table class="table table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th>Fecha creación</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var u in usuarios)
+        {
+            <tr>
+                <td>@u.Username</td>
+                <td>@ObtenerRol(u.IdRol)</td>
+                <td>
+                    <span class="badge @(u.Estado ? "bg-success" : "bg-danger")">
+                        @(u.Estado ? "Activo" : "Inactivo")
+                    </span>
+                </td>
+                <td>@u.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                <td>
+                    <button class="btn btn-warning btn-sm"
+                            @onclick="() => CambiarEstado(u.IdUsuario)">
+                        @(u.Estado ? "Desactivar" : "Activar")
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    List<Usuario> usuarios = new();
+    List<Rol> roles = new();
+
+    Usuario usuarioActual = new();
+
+    bool mostrarFormulario = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = await Db.Roles.ToListAsync();
+        await CargarUsuarios();
+    }
+
+
+    async Task CargarUsuarios()
+    {
+        usuarios = await Db.Usuarios
+            .OrderBy(u => u.IdUsuario)
+            .ToListAsync();
+    }
+
+    void NuevoUsuario()
+    {
+        usuarioActual = new Usuario
+        {
+            Estado = true,
+            FechaCreacion = DateTime.Now,
+            IdRol = roles.FirstOrDefault()?.IdRol ?? 1
+        };
+
+        mostrarFormulario = true;
+    }
+
+    async Task GuardarUsuario()
+    {
+        if (string.IsNullOrWhiteSpace(usuarioActual.Username) ||
+            string.IsNullOrWhiteSpace(usuarioActual.PasswordHash) ||
+            usuarioActual.IdRol <= 0)
+        {
+            return;
+        }
+
+        Db.Usuarios.Add(usuarioActual);
+        await Db.SaveChangesAsync();
+
+        mostrarFormulario = false;
+        usuarioActual = new Usuario();
+
+        await CargarUsuarios();
+    }
+
+    async Task CambiarEstado(int id)
+    {
+        var usuario = await Db.Usuarios.FindAsync(id);
+
+        if (usuario != null)
+        {
+            usuario.Estado = !usuario.Estado;
+            await Db.SaveChangesAsync();
+            await CargarUsuarios();
+        }
+    }
+
+    void Cancelar()
+    {
+        mostrarFormulario = false;
+        usuarioActual = new Usuario();
+    }
+
+    string ObtenerRol(int idRol)
+    {
+        var rol = roles.FirstOrDefault(r => r.IdRol == idRol);
+        return rol != null ? rol.NombreRol : "";
+    }
+}

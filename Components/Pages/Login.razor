@@ -1,0 +1,56 @@
+﻿@page "/login"
+@inject SesionService Sesion
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h3 class="mb-4 text-primary fw-bold">Iniciar Sesión</h3>
+
+<div class="card shadow p-4" style="max-width:400px;">
+    <div class="mb-3">
+        <label>Usuario</label>
+        <input class="form-control" @bind="username" />
+    </div>
+
+    <div class="mb-3">
+        <label>Contraseña</label>
+        <input type="password" class="form-control" @bind="password" />
+    </div>
+
+    <button class="btn btn-primary w-100" @onclick="IniciarSesion">
+        Ingresar
+    </button>
+
+    @if (error)
+    {
+        <div class="alert alert-danger mt-3">
+            Usuario o contraseña incorrectos
+        </div>
+    }
+</div>
+
+@code {
+    string username = "";
+    string password = "";
+    bool error = false;
+
+    async Task IniciarSesion()
+    {
+        var user = await Db.Usuarios
+            .FirstOrDefaultAsync(u =>
+                u.Username == username &&
+                u.PasswordHash == password &&
+                u.Estado);
+
+        if (user != null)
+        {
+            Sesion.UsuarioActual = user; 
+            Nav.NavigateTo("/dashboard");
+        }
+        else
+        {
+            error = true;
+        }
+    }
+}

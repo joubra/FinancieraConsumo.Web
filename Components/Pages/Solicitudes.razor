@@ -146,7 +146,7 @@
 
             Db.Creditos.Add(credito);
 
-         
+            // 🔥 GUARDAR PRIMERO EL CRÉDITO
             await Db.SaveChangesAsync();
 
             int numeroCuotas = solicitud.PlazoMeses;

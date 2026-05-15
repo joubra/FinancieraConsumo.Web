@@ -1,0 +1,98 @@
+﻿@page "/dashboard"
+@inject SesionService Sesion
+@inject NavigationManager Nav // bloqueado para redirigir si no hay sesión
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<h3 class="mb-4 text-primary fw-bold">Dashboard Financiero</h3>
+
+<div class="row">
+
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-white bg-primary">
+            <div class="card-body">
+                <h5>Total Prestado</h5>
+                <h3>@totalPrestado.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-white bg-success">
+            <div class="card-body">
+                <h5>Total Cobrado</h5>
+                <h3>@totalCobrado.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-white bg-warning">
+            <div class="card-body">
+                <h5>Cuotas Pendientes</h5>
+                <h3>@cuotasPendientes</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-white bg-info">
+            <div class="card-body">
+                <h5>Clientes Activos</h5>
+                <h3>@clientesActivos</h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row">
+
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-white bg-danger">
+            <div class="card-body">
+                <h5>Cuotas Vencidas</h5>
+                <h3>@cuotasVencidas</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-white bg-dark">
+            <div class="card-body">
+                <h5>Créditos Vigentes</h5>
+                <h3>@creditosVigentes</h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+
+    decimal totalPrestado = 0;
+    decimal totalCobrado = 0;
+    int cuotasPendientes = 0;
+    int cuotasVencidas = 0;
+    int clientesActivos = 0;
+    int creditosVigentes = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        totalPrestado = await Db.Creditos.SumAsync(c => c.MontoOtorgado);
+        totalCobrado = await Db.Pagos.SumAsync(p => p.MontoTotal);
+        cuotasPendientes = await Db.Cuotas.CountAsync(c => c.EstadoCuota == "Pendiente");
+        cuotasVencidas = await Db.Cuotas.CountAsync(c => c.EstadoCuota == "Vencida");
+        clientesActivos = await Db.Clientes.CountAsync(c => c.Estado);
+        creditosVigentes = await Db.Creditos.CountAsync(c => c.EstadoCredito == "Vigente");
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !Sesion.EstaLogueado)
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+}
