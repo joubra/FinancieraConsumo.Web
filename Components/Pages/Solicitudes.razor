@@ -1,5 +1,6 @@
 ﻿@page "/solicitudes"
 @rendermode InteractiveServer
+@inject SesionService Sesion
 @inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
 @using FinancieraConsumo.Web.Models.Entities
 @using Microsoft.EntityFrameworkCore
@@ -37,12 +38,8 @@
         <label>Plazo (meses)</label>
         <input type="number" class="form-control" @bind="solicitud.PlazoMeses" />
 
-        <button class="btn btn-primary mt-2" @onclick="Guardar">
-            Guardar
-        </button>
-        <button class="btn btn-secondary mt-2 ms-2" @onclick="Cancelar">
-            Cancelar
-        </button>
+        <button class="btn btn-primary mt-2" @onclick="Guardar">Guardar</button>
+        <button class="btn btn-secondary mt-2 ms-2" @onclick="Cancelar">Cancelar</button>
     </div>
 }
 
@@ -54,6 +51,7 @@
             <th>Monto</th>
             <th>Plazo</th>
             <th>Estado</th>
+            <th>Acciones</th>
         </tr>
     </thead>
 
@@ -65,50 +63,58 @@
                 <td>@ObtenerNombreFiador(s.IdFiador)</td>
                 <td>@s.MontoSolicitado</td>
                 <td>@s.PlazoMeses</td>
+                <td>@s.EstadoSolicitud</td>
 
                 <td>
-                    @s.EstadoSolicitud
-
-                    @if (s.EstadoSolicitud == "Pendiente")
+                    @if (Sesion.UsuarioActual?.IdRol == 1 || Sesion.UsuarioActual?.IdRol == 4)
                     {
-                        <button class="btn btn-success btn-sm ms-2"
-                                @onclick="() => Aprobar(s.IdSolicitud)">
-                            Aprobar
-                        </button>
+                        @if (s.EstadoSolicitud == "Pendiente")
+                        {
+                            <button class="btn btn-success btn-sm me-2"
+                                    @onclick="() => Aprobar(s.IdSolicitud)">
+                                Aprobar
+                            </button>
 
-                        <button class="btn btn-danger btn-sm ms-2"
-                                @onclick="() => Rechazar(s.IdSolicitud)">
-                            Rechazar
-                        </button>
+                            <button class="btn btn-danger btn-sm"
+                                    @onclick="() => Rechazar(s.IdSolicitud)">
+                                Rechazar
+                            </button>
+                        }
+                        else if (s.EstadoSolicitud == "Rechazada")
+                        {
+                            <button class="btn btn-success btn-sm"
+                                    @onclick="() => Aprobar(s.IdSolicitud)">
+                                Aprobar
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Sin acciones</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted">No permitido</span>
                     }
                 </td>
             </tr>
-        } 
-        </tbody>
-        
+        }
+    </tbody>
 </table>
 
 @code {
-
     List<SolicitudCredito> solicitudes = new();
     List<Cliente> clientes = new();
     List<Fiador> fiadores = new();
 
     SolicitudCredito solicitud = new();
-
     bool mostrar = false;
 
     protected override async Task OnInitializedAsync()
     {
         clientes = await Db.Clientes.ToListAsync();
         fiadores = await Db.Fiadores.ToListAsync();
-
         await Cargar();
-    }
-    void Cancelar()
-    {
-        mostrar = false;
-        solicitud = new SolicitudCredito();
     }
 
     async Task Cargar()
@@ -120,19 +126,50 @@
     {
         solicitud = new SolicitudCredito
         {
-            IdAnalista = 1
+            IdAnalista = 1,
+            EstadoSolicitud = "Pendiente"
         };
-
         mostrar = true;
     }
+
+    void Cancelar()
+    {
+        mostrar = false;
+        solicitud = new SolicitudCredito();
+    }
+
+    async Task Guardar()
+    {
+        if (solicitud.IdCliente <= 0 ||
+            solicitud.MontoSolicitado <= 0 ||
+            solicitud.PlazoMeses <= 0)
+            return;
+
+        solicitud.EstadoSolicitud = "Pendiente";
+
+        Db.SolicitudesCredito.Add(solicitud);
+        await Db.SaveChangesAsync();
+
+        mostrar = false;
+        solicitud = new SolicitudCredito();
+
+        await Cargar();
+    }
+
     async Task Aprobar(int id)
     {
         var solicitud = await Db.SolicitudesCredito.FindAsync(id);
 
-        if (solicitud != null)
-        {
-            solicitud.EstadoSolicitud = "Aprobada";
+        if (solicitud == null || solicitud.EstadoSolicitud == "Aprobada")
+            return;
 
+        solicitud.EstadoSolicitud = "Aprobada";
+
+        var existeCredito = await Db.Creditos
+            .AnyAsync(c => c.IdSolicitud == solicitud.IdSolicitud);
+
+        if (!existeCredito)
+        {
             var credito = new Credito
             {
                 IdSolicitud = solicitud.IdSolicitud,
@@ -145,76 +182,48 @@
             };
 
             Db.Creditos.Add(credito);
-
-            // 🔥 GUARDAR PRIMERO EL CRÉDITO
             await Db.SaveChangesAsync();
 
-            int numeroCuotas = solicitud.PlazoMeses;
-            decimal monto = solicitud.MontoSolicitado;
-            decimal interesAnual = 12;
+            int n = solicitud.PlazoMeses;
+            decimal saldo = solicitud.MontoSolicitado;
+            decimal tasa = 12m / 12m / 100m;
+            double t = (double)tasa;
 
-            decimal interesMensual = interesAnual / 12 / 100;
-            double interesMensualDouble = (double)interesMensual;
+            decimal cuotaFija = saldo * (decimal)(t / (1 - Math.Pow(1 + t, -n)));
 
-            decimal cuotaFija = monto * (decimal)(
-                interesMensualDouble /
-                (1 - Math.Pow(1 + interesMensualDouble, -numeroCuotas))
-            );
-
-            for (int i = 1; i <= numeroCuotas; i++)
+            for (int i = 1; i <= n; i++)
             {
-                decimal interes = monto * interesMensual;
+                decimal interes = saldo * tasa;
                 decimal capital = cuotaFija - interes;
 
-                var cuota = new Cuota
+                Db.Cuotas.Add(new Cuota
                 {
                     IdCredito = credito.IdCredito,
                     NumeroCuota = i,
                     Capital = capital,
                     Interes = interes,
-                    FechaVencimiento = DateTime.Today.AddMonths(i)
-                };
+                    FechaVencimiento = DateTime.Today.AddMonths(i),
+                    EstadoCuota = "Pendiente"
+                });
 
-                Db.Cuotas.Add(cuota);
-
-                monto -= capital;
+                saldo -= capital;
             }
-
-          
-            await Db.SaveChangesAsync();
-
-            await Cargar();
         }
+
+        await Db.SaveChangesAsync();
+        await Cargar();
     }
 
     async Task Rechazar(int id)
     {
         var solicitud = await Db.SolicitudesCredito.FindAsync(id);
 
-        if (solicitud != null)
-        {
-            solicitud.EstadoSolicitud = "Rechazada";
-            await Db.SaveChangesAsync();
-
-            await Cargar();
-        }
-    }
-
-    async Task Guardar()
-    {
-        if (solicitud.IdCliente <= 0 ||
-            solicitud.MontoSolicitado <= 0 ||
-            solicitud.PlazoMeses <= 0)
+        if (solicitud == null || solicitud.EstadoSolicitud != "Pendiente")
             return;
 
-        solicitud.IdAnalista = 1;
+        solicitud.EstadoSolicitud = "Rechazada";
 
-        Db.SolicitudesCredito.Add(solicitud);
         await Db.SaveChangesAsync();
-
-        mostrar = false;
-        solicitud = new SolicitudCredito(); 
-
         await Cargar();
     }
 

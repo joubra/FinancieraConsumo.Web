@@ -1,0 +1,97 @@
+﻿@page "/reportes"
+@using FinancieraConsumo.Web.Models.Entities
+@rendermode InteractiveServer
+@inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<h3 class="mb-4 text-primary fw-bold">Reportes Financieros</h3>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow">
+            <div class="card-body">
+                <h5>Total Prestado</h5>
+                <h3>@totalPrestado.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow">
+            <div class="card-body">
+                <h5>Total Cobrado</h5>
+                <h3>@totalCobrado.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark shadow">
+            <div class="card-body">
+                <h5>Pendiente</h5>
+                <h3>@totalPendiente.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-danger text-white shadow">
+            <div class="card-body">
+                <h5>Cuotas Vencidas</h5>
+                <h3>@cuotasVencidas</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h5>Últimos Pagos</h5>
+
+<table class="table table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th># Pago</th>
+            <th>Crédito</th>
+            <th>Monto</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in pagos)
+        {
+            <tr>
+                <td>@p.IdPago</td>
+                <td>@p.IdCredito</td>
+                <td>@p.MontoTotal.ToString("N2")</td>
+                <td>@p.FechaPago.ToString("dd/MM/yyyy")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    decimal totalPrestado;
+    decimal totalCobrado;
+    decimal totalPendiente;
+    int cuotasVencidas;
+
+    List<Pago> pagos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        totalPrestado = await Db.Creditos.SumAsync(c => c.MontoOtorgado);
+
+        totalCobrado = await Db.Pagos.SumAsync(p => p.MontoTotal);
+
+        totalPendiente = await Db.Cuotas
+            .Where(c => c.EstadoCuota != "Pagada")
+            .SumAsync(c => c.Capital + c.Interes + c.MoraAcumulada);
+
+        cuotasVencidas = await Db.Cuotas
+            .CountAsync(c => c.EstadoCuota == "Vencida");
+
+        pagos = await Db.Pagos
+            .OrderByDescending(p => p.IdPago)
+            .Take(10)
+            .ToListAsync();
+    }
+}

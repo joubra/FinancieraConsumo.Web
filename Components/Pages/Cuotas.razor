@@ -1,4 +1,5 @@
 ﻿@page "/cuotas"
+@rendermode InteractiveServer
 @inject SesionService Sesion
 @inject NavigationManager Nav
 @inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
@@ -30,25 +31,34 @@
         </div>
 
         <div class="card-body">
+
             @if (cuotaAPagar != null)
             {
                 <div class="alert alert-warning">
                     <strong>¿Confirmar pago de esta cuota?</strong>
 
                     <div class="mt-2">
-                        <button type="button" class="btn btn-success me-2" @onclick="PagarConfirmado">
+                        <button class="btn btn-success me-2" @onclick="PagarConfirmado">
                             Sí, pagar
                         </button>
 
-                        <button type="button" class="btn btn-secondary" @onclick="CancelarPago">
+                        <button class="btn btn-secondary" @onclick="CancelarPago">
                             Cancelar
                         </button>
                     </div>
                 </div>
             }
-            <p><strong>Total pagado:</strong> @cuotas.Where(c => c.EstadoCuota == "Pagada").Sum(c => c.Capital + c.Interes)</p>
 
-            <p><strong>Pendiente:</strong> @cuotas.Where(c => c.EstadoCuota != "Pagada").Sum(c => c.Capital + c.Interes + c.MoraAcumulada)</p>
+            <p>
+                <strong>Total pagado:</strong>
+                @cuotas.Where(c => c.EstadoCuota == "Pagada").Sum(c => c.Capital + c.Interes).ToString("N2")
+            </p>
+
+            <p>
+                <strong>Pendiente:</strong>
+                @cuotas.Where(c => c.EstadoCuota != "Pagada").Sum(c => c.Capital + c.Interes + c.MoraAcumulada).ToString("N2")
+            </p>
+
             <table class="table table-hover">
                 <thead class="table-dark">
                     <tr>
@@ -64,64 +74,43 @@
                 </thead>
 
                 <tbody>
-     @foreach (var cuota in cuotas)
-{
-    <tr>
-        <td>@cuota.NumeroCuota</td>
-        <td>@cuota.Capital.ToString("N2")</td>
-        <td>@cuota.Interes.ToString("N2")</td>
-        <td>@cuota.MoraAcumulada.ToString("N2")</td>
-        <td>@((cuota.Capital + cuota.Interes + cuota.MoraAcumulada).ToString("N2"))</td>
-        <td>@cuota.FechaVencimiento.ToString("dd/MM/yyyy")</td>
+                    @foreach (var cuota in cuotas)
+                    {
+                        <tr>
+                            <td>@cuota.NumeroCuota</td>
+                            <td>@cuota.Capital.ToString("N2")</td>
+                            <td>@cuota.Interes.ToString("N2")</td>
+                            <td>@cuota.MoraAcumulada.ToString("N2")</td>
+                            <td>@((cuota.Capital + cuota.Interes + cuota.MoraAcumulada).ToString("N2"))</td>
+                            <td>@cuota.FechaVencimiento.ToString("dd/MM/yyyy")</td>
 
-        <td>
-            <span class="badge @(cuota.EstadoCuota == "Pagada" ? "bg-success" :
-                               cuota.EstadoCuota == "Vencida" ? "bg-danger" :
-                               "bg-warning text-dark")">
-                @cuota.EstadoCuota
-            </span>
-        </td>
+                            <td>
+                                <span class="badge @(cuota.EstadoCuota == "Pagada" ? "bg-success" :
+                                                                                         cuota.EstadoCuota == "Vencida" ? "bg-danger" :
+                                                                                         "bg-warning text-dark")">
+                                    @cuota.EstadoCuota
+                                </span>
+                            </td>
 
-        <td>
-            @if (cuota.EstadoCuota == "Pendiente" &&
-                (Sesion.UsuarioActual?.IdRol == 5 || Sesion.UsuarioActual?.IdRol == 4))
-            {
-                <button class="btn btn-success btn-sm"
-                        @onclick="() => ConfirmarPago(cuota.IdCuota)">
-                    Pagar
-                </button>
-            }
-            else
-            {
-                <span class="text-muted">No permitido</span>
-            }
-        </td>
-    </tr>
-}
-                       
+                            <td>
+                                @if ((cuota.EstadoCuota == "Pendiente" || cuota.EstadoCuota == "Vencida") &&
+                                     (Sesion.UsuarioActual?.IdRol == 5 || Sesion.UsuarioActual?.IdRol == 4))
+                                {
+                                    <button class="btn btn-success btn-sm"
+                                            @onclick="() => ConfirmarPago(cuota.IdCuota)">
+                                        Pagar
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No permitido</span>
+                                }
+                            </td>
+                        </tr>
                     }
                 </tbody>
-              >
-
             </table>
-          
 
-            @if (cuotaAPagar != null)
-            {
-                <div class="alert alert-warning mt-3">
-                    <strong>¿Confirmar pago de esta cuota?</strong>
-
-                    <div class="mt-2">
-                        <button class="btn btn-success me-2" @onclick="PagarConfirmado">
-                            Sí, pagar
-                        </button>
-
-                        <button class="btn btn-secondary" @onclick="CancelarPago">
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            }
         </div>
     </div>
 }
@@ -132,20 +121,21 @@
     List<Credito> creditos = new();
     List<Cuota> cuotas = new();
 
-
     protected override async Task OnInitializedAsync()
     {
         creditos = await Db.Creditos
             .OrderByDescending(c => c.IdCredito)
             .ToListAsync();
     }
+
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender && !Sesion.EstaLogueado)
         {
             Nav.NavigateTo("/login");
         }
-    }// bloqueado para redirigir si no hay sesión
+    }
+
     async Task CargarCuotasCredito(ChangeEventArgs e)
     {
         int idCredito = int.Parse(e.Value!.ToString()!);
@@ -161,19 +151,12 @@
             .OrderBy(c => c.NumeroCuota)
             .ToListAsync();
 
-        
-        foreach (var cuota in cuotas)
-        {
-            if (cuota.FechaVencimiento < DateTime.Today && cuota.EstadoCuota == "Pendiente")
-            {
-                cuota.EstadoCuota = "Vencida";
-            }
-        }
         bool cambios = false;
 
         foreach (var cuota in cuotas)
         {
-            if (cuota.FechaVencimiento < DateTime.Today && cuota.EstadoCuota == "Pendiente")
+            if (cuota.FechaVencimiento < DateTime.Today &&
+                cuota.EstadoCuota == "Pendiente")
             {
                 cuota.EstadoCuota = "Vencida";
                 cambios = true;
@@ -210,24 +193,22 @@
     {
         var cuota = await Db.Cuotas.FindAsync(idCuota);
 
-        if (cuota == null || cuota.EstadoCuota != "Pendiente")
+        if (cuota == null || cuota.EstadoCuota == "Pagada")
             return;
 
         var existePendienteAnterior = await Db.Cuotas
             .AnyAsync(c =>
                 c.IdCredito == cuota.IdCredito &&
                 c.NumeroCuota < cuota.NumeroCuota &&
-                c.EstadoCuota == "Pendiente");
+                c.EstadoCuota != "Pagada");
 
         if (existePendienteAnterior)
-        {
             return;
-        }
 
         var pago = new Pago
         {
             IdCredito = cuota.IdCredito,
-            IdUsuarioCajero = 1,
+            IdUsuarioCajero = Sesion.UsuarioActual?.IdUsuario ?? 1,
             MontoTotal = cuota.Capital + cuota.Interes + cuota.MoraAcumulada
         };
 
