@@ -31,12 +31,20 @@
                 <option value="@f.IdFiador">@f.Nombres @f.Apellidos</option>
             }
         </select>
+        <label>Tasa de interés (%)</label>
+        <select class="form-control" @bind="solicitud.TasaInteresAnual">
+            <option value="12">12%</option>
+            <option value="18">18%</option>
+            <option value="24">24%</option>
+            <option value="36">36%</option>
+        </select>
 
         <label>Monto</label>
         <input type="number" class="form-control" @bind="solicitud.MontoSolicitado" />
 
         <label>Plazo (meses)</label>
         <input type="number" class="form-control" @bind="solicitud.PlazoMeses" />
+
 
         <button class="btn btn-primary mt-2" @onclick="Guardar">Guardar</button>
         <button class="btn btn-secondary mt-2 ms-2" @onclick="Cancelar">Cancelar</button>
@@ -106,6 +114,7 @@
     List<SolicitudCredito> solicitudes = new();
     List<Cliente> clientes = new();
     List<Fiador> fiadores = new();
+    
 
     SolicitudCredito solicitud = new();
     bool mostrar = false;
@@ -174,7 +183,7 @@
             {
                 IdSolicitud = solicitud.IdSolicitud,
                 MontoOtorgado = solicitud.MontoSolicitado,
-                TasaInteresAnual = 12,
+                TasaInteresAnual = solicitud.TasaInteresAnual,
                 PlazoMeses = solicitud.PlazoMeses,
                 FechaInicio = DateTime.Today,
                 FechaVencimiento = DateTime.Today.AddMonths(solicitud.PlazoMeses),
@@ -186,7 +195,7 @@
 
             int n = solicitud.PlazoMeses;
             decimal saldo = solicitud.MontoSolicitado;
-            decimal tasa = 12m / 12m / 100m;
+            decimal tasa = solicitud.TasaInteresAnual / 12m / 100m;
             double t = (double)tasa;
 
             decimal cuotaFija = saldo * (decimal)(t / (1 - Math.Pow(1 + t, -n)));

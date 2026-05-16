@@ -18,5 +18,6 @@ public class SolicitudCredito
     public DateTime FechaSolicitud { get; set; } = DateTime.Now;
 
     public string EstadoSolicitud { get; set; } = "Pendiente";
-    
+    public decimal TasaInteresAnual { get; set; } = 12;
+
 }
