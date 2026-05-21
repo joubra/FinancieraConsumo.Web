@@ -3,12 +3,17 @@
 @inject FinancieraConsumo.Web.Data.ApplicationDbContext Db
 @using FinancieraConsumo.Web.Models.Entities
 @using Microsoft.EntityFrameworkCore
+@inject SesionService Sesion
+@inject NavigationManager Nav
 
 <h3 class="mb-4 text-primary fw-bold">Gestión de Usuarios</h3>
 
-<button class="btn btn-success mb-3" @onclick="NuevoUsuario">
-    Nuevo Usuario
-</button>
+@if (Sesion.UsuarioActual?.IdRol == 4)
+{
+    <button class="btn btn-success mb-3" @onclick="NuevoUsuario">
+        Nuevo Usuario
+    </button>
+}
 
 @if (mostrarFormulario)
 {
@@ -106,9 +111,20 @@
             .OrderBy(u => u.IdUsuario)
             .ToListAsync();
     }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && Sesion.UsuarioActual?.IdRol != 4)
+        {
+            Nav.NavigateTo("/dashboard");
+        }
+    }
 
     void NuevoUsuario()
     {
+        if (Sesion.UsuarioActual?.IdRol != 4)
+        {
+            return;
+        }
         usuarioActual = new Usuario
         {
             Estado = true,

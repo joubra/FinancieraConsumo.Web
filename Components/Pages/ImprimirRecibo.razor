@@ -1,0 +1,29 @@
+﻿@page "/imprimir-recibo/{IdCuota:int}"
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+
+<h3>Impresión de Recibo</h3>
+
+<div class="card p-3">
+    <label>Número de copias</label>
+    <input type="number" class="form-control" min="1" max="5" @bind="copias" />
+
+    <button class="btn btn-primary mt-3" @onclick="Imprimir">
+        Imprimir
+    </button>
+
+    <a class="btn btn-secondary mt-2" href="/cuotas">
+        Volver
+    </a>
+</div>
+
+@code {
+    [Parameter] public int IdCuota { get; set; }
+
+    int copias = 1;
+
+    void Imprimir()
+    {
+        Nav.NavigateTo($"/api/recibo/{IdCuota}?copias={copias}", true);
+    }
+}
